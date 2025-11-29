@@ -19,4 +19,4 @@ dependencies:
 
   espressif/esp_lvgl_port: ^2.6.3
   espressif/esp_lcd_touch: ^1.1.2
-  cfscn/esp_lcd_touch_ft6x36: ^1.0.8
+  lambage/esp_lcd_touch_ft6336u: ^1.0.8
