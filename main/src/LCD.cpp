@@ -2,7 +2,6 @@
 
 #include "esp_err.h"
 #include "esp_log.h"
-#include "esp_check.h"
 
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_panel_ops.h"
@@ -17,8 +16,6 @@ namespace ESP32S3_FREENOVE_DEV_KIT
     static const char *TAG = "LCD";
 
     LCD::LCD() {
-       esp_err_t ret = ESP_OK;
-
         spi_bus_config_t buscfg = {};
         esp_lcd_panel_dev_config_t panel_config = {};
         esp_lcd_panel_io_spi_config_t io_config = {};
