@@ -23,8 +23,6 @@
 #define CAM_Y6_PIN GPIO_NUM_12
 #define CAM_PCLK_PIN GPIO_NUM_13
 #define IIS_BCK_PIN GPIO_NUM_14
-#define IIC_SCL_PIN GPIO_NUM_1
-#define IIC_SDA_PIN GPIO_NUM_2
 #define IIS_LCK_PIN GPIO_NUM_42
 #define IIS_DIN_PIN GPIO_NUM_41
 #define SD_DATA_PIN GPIO_NUM_40
@@ -33,18 +31,32 @@
 #define PSRAM_0_PIN GPIO_NUM_37
 #define PSRAM_1_PIN GPIO_NUM_36
 #define PSRAM_2_PIN GPIO_NUM_35
-#define TFT_DC_PIN GPIO_NUM_0
 #define STRAPPING_2_PIN GPIO_NUM_45
 #define WS2812_PIN GPIO_NUM_48
-#define TFT_CS_PIN GPIO_NUM_47
-#define TFT_SCK_PIN GPIO_NUM_21
 #define TFT_MOSI_PIN GPIO_NUM_20
 #define BAT_ADC_PIN GPIO_NUM_19
 
+// Display settings
+#define TFT_DC_PIN GPIO_NUM_0
+#define TFT_CS_PIN GPIO_NUM_47
+#define TFT_SCK_PIN GPIO_NUM_21
+#define TFT_RST_PIN GPIO_NUM_NC
+
+#define LCD_SPI_NUM (SPI3_HOST)
 #define LCD_H_RES 240
 #define LCD_V_RES 320
-#define LCD_PIXEL_CLOCK_HZ (40 * 1000 * 1000) // 40 MHz clock speed
-#define LCD_CMD_BITS 8
-#define LCD_PARAM_BITS 8
+#define LCD_PIXEL_CLK_HZ (40 * 1000 * 1000)
+#define LCD_CMD_BITS (8)
+#define LCD_PARAM_BITS (8)
+#define LCD_BITS_PER_PIXEL (16)
+#define LCD_DRAW_BUFF_DOUBLE (1)
+#define LCD_DRAW_BUFF_HEIGHT (50)
+
+// Touch settings
+#define TOUCH_IIC_NUM (0)
+#define TOUCH_IIC_CLK_HZ (400000)
+#define IIC_SCL_PIN GPIO_NUM_1
+#define IIC_SDA_PIN GPIO_NUM_2
+#define IIC_INT_PIN GPIO_NUM_NC
 
 #endif // BOARD_INFO_H

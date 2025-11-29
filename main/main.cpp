@@ -12,37 +12,9 @@
 #include "esp_lcd_touch_ft6x36.h"
 #include "esp_lvgl_port_touch.h"
 
+#include "BoardInfo.h"
+
 static const char *TAG = "LVGL_PORT_TEST";
-
-/* LCD size */
-#define LCD_H_RES (240)
-#define LCD_V_RES (320)
-
-/* LCD settings */
-#define LCD_SPI_NUM (SPI3_HOST)
-#define LCD_PIXEL_CLK_HZ (40 * 1000 * 1000)
-#define LCD_CMD_BITS (8)
-#define LCD_PARAM_BITS (8)
-#define LCD_BITS_PER_PIXEL (16)
-#define LCD_DRAW_BUFF_DOUBLE (1)
-#define LCD_DRAW_BUFF_HEIGHT (50)
-
-/* LCD pins */
-#define LCD_GPIO_SCLK (GPIO_NUM_21)
-#define LCD_GPIO_MOSI (GPIO_NUM_20)
-#define LCD_GPIO_RST (GPIO_NUM_NC)
-#define LCD_GPIO_DC (GPIO_NUM_0)
-#define LCD_GPIO_CS (GPIO_NUM_47)
-#define LCD_GPIO_BL (GPIO_NUM_NC)
-
-/* Touch settings */
-#define TOUCH_I2C_NUM (0)
-#define TOUCH_I2C_CLK_HZ (400000)
-
-/* LCD touch pins */
-#define TOUCH_I2C_SCL (GPIO_NUM_1)
-#define TOUCH_I2C_SDA (GPIO_NUM_2)
-#define TOUCH_GPIO_INT (GPIO_NUM_NC)
 
 // LVGL image declare
 LV_IMG_DECLARE(esp_logo)
@@ -66,17 +38,17 @@ static esp_err_t app_lcd_init(void)
 
     /* LCD initialization */
     ESP_LOGD(TAG, "Initialize SPI bus");
-    buscfg.mosi_io_num = LCD_GPIO_MOSI;
+    buscfg.mosi_io_num = TFT_MOSI_PIN;
     buscfg.miso_io_num = GPIO_NUM_NC;
-    buscfg.sclk_io_num = LCD_GPIO_SCLK;
+    buscfg.sclk_io_num = TFT_SCK_PIN;
     buscfg.quadwp_io_num = GPIO_NUM_NC;
     buscfg.quadhd_io_num = GPIO_NUM_NC;
     buscfg.max_transfer_sz = LCD_H_RES * LCD_DRAW_BUFF_HEIGHT * sizeof(uint16_t);
     ESP_RETURN_ON_ERROR(spi_bus_initialize(LCD_SPI_NUM, &buscfg, SPI_DMA_CH_AUTO), TAG, "SPI init failed");
 
     ESP_LOGD(TAG, "Install panel IO");
-    io_config.dc_gpio_num = LCD_GPIO_DC;
-    io_config.cs_gpio_num = LCD_GPIO_CS;
+    io_config.dc_gpio_num = TFT_DC_PIN;
+    io_config.cs_gpio_num = TFT_CS_PIN;
     io_config.pclk_hz = LCD_PIXEL_CLK_HZ;
     io_config.lcd_cmd_bits = LCD_CMD_BITS;
     io_config.lcd_param_bits = LCD_PARAM_BITS;
@@ -85,7 +57,7 @@ static esp_err_t app_lcd_init(void)
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)LCD_SPI_NUM, &io_config, &lcd_io), err, TAG, "New panel IO failed");
 
     ESP_LOGD(TAG, "Install LCD driver");
-    panel_config.reset_gpio_num = LCD_GPIO_RST;
+    panel_config.reset_gpio_num = TFT_RST_PIN;
     panel_config.data_endian = LCD_RGB_DATA_ENDIAN_LITTLE;
     panel_config.rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB;
     panel_config.bits_per_pixel = LCD_BITS_PER_PIXEL;
@@ -116,9 +88,9 @@ static esp_err_t app_touch_init(void)
     /* Initilize I2C */
     i2c_master_bus_handle_t i2c_handle = NULL;
     i2c_master_bus_config_t i2c_config = {};
-    i2c_config.i2c_port = TOUCH_I2C_NUM;
-    i2c_config.sda_io_num = TOUCH_I2C_SDA;
-    i2c_config.scl_io_num = TOUCH_I2C_SCL;
+    i2c_config.i2c_port = TOUCH_IIC_NUM;
+    i2c_config.sda_io_num = IIC_SDA_PIN;
+    i2c_config.scl_io_num = IIC_SCL_PIN;
     i2c_config.clk_source = I2C_CLK_SRC_DEFAULT;
     ESP_RETURN_ON_ERROR(i2c_new_master_bus(&i2c_config, &i2c_handle), TAG, "");
 
@@ -127,7 +99,7 @@ static esp_err_t app_touch_init(void)
     tp_cfg.x_max = LCD_H_RES;
     tp_cfg.y_max = LCD_V_RES;
     tp_cfg.rst_gpio_num = GPIO_NUM_NC;
-    tp_cfg.int_gpio_num = TOUCH_GPIO_INT;
+    tp_cfg.int_gpio_num = IIC_INT_PIN;
     tp_cfg.levels = {
         .reset = 0,
         .interrupt = 0,
@@ -148,7 +120,7 @@ static esp_err_t app_touch_init(void)
         .dc_low_on_data = 0,
         .disable_control_phase = 1,
     };
-    tp_io_config.scl_speed_hz = TOUCH_I2C_CLK_HZ;
+    tp_io_config.scl_speed_hz = TOUCH_IIC_CLK_HZ;
     ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_i2c(i2c_handle, &tp_io_config, &tp_io_handle), TAG, "");
 
     return esp_lcd_touch_new_i2c_ft6x36(tp_io_handle, &tp_cfg, &touch_handle);
