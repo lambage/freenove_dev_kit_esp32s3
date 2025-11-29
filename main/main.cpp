@@ -13,6 +13,13 @@
 #include "esp_lvgl_port_touch.h"
 
 #include "BoardInfo.h"
+#include "LCD.hpp"
+
+#include <stdexcept>
+#include <thread>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 static const char *TAG = "LVGL_PORT_TEST";
 
@@ -20,68 +27,11 @@ static const char *TAG = "LVGL_PORT_TEST";
 LV_IMG_DECLARE(esp_logo)
 
 /* LCD IO and panel */
-static esp_lcd_panel_io_handle_t lcd_io = NULL;
-static esp_lcd_panel_handle_t lcd_panel = NULL;
 static esp_lcd_touch_handle_t touch_handle = NULL;
 
 /* LVGL display and touch */
 static lv_display_t *lvgl_disp = NULL;
 static lv_indev_t *lvgl_touch_indev = NULL;
-
-static esp_err_t app_lcd_init(void)
-{
-    esp_err_t ret = ESP_OK;
-
-    spi_bus_config_t buscfg = {};
-    esp_lcd_panel_dev_config_t panel_config = {};
-    esp_lcd_panel_io_spi_config_t io_config = {};
-
-    /* LCD initialization */
-    ESP_LOGD(TAG, "Initialize SPI bus");
-    buscfg.mosi_io_num = TFT_MOSI_PIN;
-    buscfg.miso_io_num = GPIO_NUM_NC;
-    buscfg.sclk_io_num = TFT_SCK_PIN;
-    buscfg.quadwp_io_num = GPIO_NUM_NC;
-    buscfg.quadhd_io_num = GPIO_NUM_NC;
-    buscfg.max_transfer_sz = LCD_H_RES * LCD_DRAW_BUFF_HEIGHT * sizeof(uint16_t);
-    ESP_RETURN_ON_ERROR(spi_bus_initialize(LCD_SPI_NUM, &buscfg, SPI_DMA_CH_AUTO), TAG, "SPI init failed");
-
-    ESP_LOGD(TAG, "Install panel IO");
-    io_config.dc_gpio_num = TFT_DC_PIN;
-    io_config.cs_gpio_num = TFT_CS_PIN;
-    io_config.pclk_hz = LCD_PIXEL_CLK_HZ;
-    io_config.lcd_cmd_bits = LCD_CMD_BITS;
-    io_config.lcd_param_bits = LCD_PARAM_BITS;
-    io_config.spi_mode = 0;
-    io_config.trans_queue_depth = 10;
-    ESP_GOTO_ON_ERROR(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)LCD_SPI_NUM, &io_config, &lcd_io), err, TAG, "New panel IO failed");
-
-    ESP_LOGD(TAG, "Install LCD driver");
-    panel_config.reset_gpio_num = TFT_RST_PIN;
-    panel_config.data_endian = LCD_RGB_DATA_ENDIAN_LITTLE;
-    panel_config.rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB;
-    panel_config.bits_per_pixel = LCD_BITS_PER_PIXEL;
-    ESP_GOTO_ON_ERROR(esp_lcd_new_panel_st7789(lcd_io, &panel_config, &lcd_panel), err, TAG, "New panel failed");
-
-    esp_lcd_panel_reset(lcd_panel);
-    esp_lcd_panel_init(lcd_panel);
-    esp_lcd_panel_mirror(lcd_panel, true, true);
-    esp_lcd_panel_disp_on_off(lcd_panel, true);
-
-    return ret;
-
-err:
-    if (lcd_panel)
-    {
-        esp_lcd_panel_del(lcd_panel);
-    }
-    if (lcd_io)
-    {
-        esp_lcd_panel_io_del(lcd_io);
-    }
-    spi_bus_free(LCD_SPI_NUM);
-    return ret;
-}
 
 static esp_err_t app_touch_init(void)
 {
@@ -126,7 +76,7 @@ static esp_err_t app_touch_init(void)
     return esp_lcd_touch_new_i2c_ft6x36(tp_io_handle, &tp_cfg, &touch_handle);
 }
 
-static esp_err_t app_lvgl_init(void)
+static esp_err_t app_lvgl_init(const ESP32S3_FREENOVE_DEV_KIT::LCD &lcd)
 {
     /* Initialize LVGL */
     lvgl_port_cfg_t lvgl_cfg = {};
@@ -140,8 +90,8 @@ static esp_err_t app_lvgl_init(void)
     /* Add LCD screen */
     ESP_LOGD(TAG, "Add LCD screen");
     lvgl_port_display_cfg_t disp_cfg = {};
-    disp_cfg.io_handle = lcd_io;
-    disp_cfg.panel_handle = lcd_panel;
+    disp_cfg.io_handle = lcd.getPanelIOHandle();
+    disp_cfg.panel_handle = lcd.getPanelHandle();
     disp_cfg.buffer_size = LCD_H_RES * LCD_DRAW_BUFF_HEIGHT;
     disp_cfg.double_buffer = LCD_DRAW_BUFF_DOUBLE;
     disp_cfg.hres = LCD_H_RES;
@@ -227,14 +177,25 @@ static void app_main_display(void)
 extern "C" void app_main(void)
 {
     /* LCD HW initialization */
-    ESP_ERROR_CHECK(app_lcd_init());
+    try
+    {
+        ESP32S3_FREENOVE_DEV_KIT::LCD lcd{};
 
-    /* Touch initialization */
-    ESP_ERROR_CHECK(app_touch_init());
+        /* Touch initialization */
+        ESP_ERROR_CHECK(app_touch_init());
 
-    /* LVGL initialization */
-    ESP_ERROR_CHECK(app_lvgl_init());
+        /* LVGL initialization */
+        ESP_ERROR_CHECK(app_lvgl_init(lcd));
 
-    /* Show LVGL objects */
-    app_main_display();
+        /* Show LVGL objects */
+        app_main_display();
+
+        while (true) {
+            std::this_thread::sleep_for(20ms);
+        }
+    }
+    catch (const std::exception &ex)
+    {
+        ESP_LOGD(TAG, "%s", ex.what());
+    }
 }
