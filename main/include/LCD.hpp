@@ -11,6 +11,11 @@ namespace ESP32S3_FREENOVE_DEV_KIT
         LCD();
         ~LCD();
 
+        LCD(LCD &&) = default;
+        LCD& operator=(LCD &&) = default;
+        LCD(const LCD &) = delete;
+        LCD& operator=(const LCD &) = delete;
+        
         esp_lcd_panel_io_handle_t getPanelIOHandle() const;
         esp_lcd_panel_handle_t getPanelHandle() const;
 

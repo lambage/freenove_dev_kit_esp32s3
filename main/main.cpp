@@ -12,63 +12,29 @@
 #include "BoardInfo.h"
 #include "LCD.hpp"
 #include "Touch.hpp"
+#include "LVGL.hpp"
 
 #include <stdexcept>
 #include <thread>
 #include <chrono>
 
 using namespace std::chrono_literals;
+using namespace ESP32S3_FREENOVE_DEV_KIT;
 
 static const char *TAG = "LVGL_PORT_TEST";
 
 // LVGL image declare
 LV_IMG_DECLARE(esp_logo)
 
-/* LVGL display and touch */
-static lv_display_t *lvgl_disp = NULL;
-static lv_indev_t *lvgl_touch_indev = NULL;
-
-static esp_err_t app_lvgl_init(const ESP32S3_FREENOVE_DEV_KIT::LCD &lcd, const ESP32S3_FREENOVE_DEV_KIT::Touch &touch)
-{
-    /* Initialize LVGL */
-    lvgl_port_cfg_t lvgl_cfg = {};
-    lvgl_cfg.task_priority = 4;       /* LVGL task priority */
-    lvgl_cfg.task_stack = 4096;       /* LVGL task stack size */
-    lvgl_cfg.task_affinity = -1;      /* LVGL task pinned to core (-1 is no affinity) */
-    lvgl_cfg.task_max_sleep_ms = 500; /* Maximum sleep in LVGL task */
-    lvgl_cfg.timer_period_ms = 5;     /* LVGL timer tick period in ms */
-    ESP_RETURN_ON_ERROR(lvgl_port_init(&lvgl_cfg), TAG, "LVGL port initialization failed");
-
-    /* Add LCD screen */
-    ESP_LOGD(TAG, "Add LCD screen");
-    lvgl_port_display_cfg_t disp_cfg = {};
-    disp_cfg.io_handle = lcd.getPanelIOHandle();
-    disp_cfg.panel_handle = lcd.getPanelHandle();
-    disp_cfg.buffer_size = LCD_H_RES * LCD_DRAW_BUFF_HEIGHT;
-    disp_cfg.double_buffer = LCD_DRAW_BUFF_DOUBLE;
-    disp_cfg.hres = LCD_H_RES;
-    disp_cfg.vres = LCD_V_RES;
-    disp_cfg.monochrome = false;
-    disp_cfg.rotation = {
-        .swap_xy = false,
-        .mirror_x = false,
-        .mirror_y = false,
-    };
-    disp_cfg.flags.buff_dma = true;
-    lvgl_disp = lvgl_port_add_disp(&disp_cfg);
-
-    /* Add touch input (for selected screen) */
-    lvgl_port_touch_cfg_t touch_cfg = {};
-    touch_cfg.disp = lvgl_disp;
-    touch_cfg.handle = touch.getTouchHandle();
-    lvgl_touch_indev = lvgl_port_add_touch(&touch_cfg);
-
-    return ESP_OK;
-}
-
 static void _app_button_cb(lv_event_t *e)
 {
-    lv_disp_rot_t rotation = lv_disp_get_rotation(lvgl_disp);
+    lv_display_t *lvgl_display = static_cast<lv_display_t *>(e->user_data);
+    if (lvgl_display == nullptr) {
+        ESP_LOGD(TAG, "Invalid LVGL pointer");
+        return;
+    }
+
+    lv_disp_rot_t rotation = lv_disp_get_rotation(lvgl_display);
     switch (rotation)
     {
     case LV_DISP_ROT_NONE:
@@ -86,10 +52,10 @@ static void _app_button_cb(lv_event_t *e)
     }
 
     /* LCD HW rotation */
-    lv_disp_set_rotation(lvgl_disp, rotation);
+    lv_disp_set_rotation(lvgl_display, rotation);
 }
 
-static void app_main_display(void)
+static void app_main_display(const LVGL& lvgl)
 {
     lv_obj_t *scr = lv_scr_act();
 
@@ -120,7 +86,7 @@ static void app_main_display(void)
     label = lv_label_create(btn);
     lv_label_set_text_static(label, "Rotate screen");
     lv_obj_align(btn, LV_ALIGN_BOTTOM_MID, 0, -30);
-    lv_obj_add_event_cb(btn, _app_button_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(btn, _app_button_cb, LV_EVENT_CLICKED, (void *)lvgl.getDisplay());
 
     /* Task unlock */
     lvgl_port_unlock();
@@ -128,18 +94,12 @@ static void app_main_display(void)
 
 extern "C" void app_main(void)
 {
-    /* LCD HW initialization */
     try
     {
-        ESP32S3_FREENOVE_DEV_KIT::LCD lcd{};
-
-        ESP32S3_FREENOVE_DEV_KIT::Touch touch{};
-
-        /* LVGL initialization */
-        ESP_ERROR_CHECK(app_lvgl_init(lcd, touch));
+        auto lvgl = std::make_unique<LVGL>(std::make_unique<LCD>(), std::make_unique<Touch>()); 
 
         /* Show LVGL objects */
-        app_main_display();
+        app_main_display(*lvgl);
 
         while (true) {
             std::this_thread::sleep_for(20ms);

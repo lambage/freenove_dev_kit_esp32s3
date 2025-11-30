@@ -1,4 +1,4 @@
-idf_component_register(SRCS "main.cpp" "src/LCD.cpp" "src/Touch.cpp"
+idf_component_register(SRCS "main.cpp" "src/LCD.cpp" "src/Touch.cpp" "src/LVGL.cpp"
                     INCLUDE_DIRS "." "include")
 
 lvgl_port_create_c_image("images/esp_logo.png" "images/" "TRUECOLOR_ALPHA" "NONE")

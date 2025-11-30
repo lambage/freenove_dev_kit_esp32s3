@@ -15,7 +15,8 @@ namespace ESP32S3_FREENOVE_DEV_KIT
 
     static const char *TAG = "LCD";
 
-    LCD::LCD() {
+    LCD::LCD()
+    {
         spi_bus_config_t buscfg = {};
         esp_lcd_panel_dev_config_t panel_config = {};
         esp_lcd_panel_io_spi_config_t io_config = {};
@@ -42,17 +43,19 @@ namespace ESP32S3_FREENOVE_DEV_KIT
         io_config.lcd_param_bits = LCD_PARAM_BITS;
         io_config.spi_mode = 0;
         io_config.trans_queue_depth = 10;
-        if (esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)LCD_SPI_NUM, &io_config, &lcd_io) != ESP_OK) {
+        if (esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)LCD_SPI_NUM, &io_config, &lcd_io) != ESP_OK)
+        {
             ESP_LOGD(TAG, "New panel IO failed");
             throw std::runtime_error("New panel IO failed");
-        }  
+        }
 
         ESP_LOGD(TAG, "Install LCD driver");
         panel_config.reset_gpio_num = TFT_RST_PIN;
         panel_config.data_endian = LCD_RGB_DATA_ENDIAN_LITTLE;
         panel_config.rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB;
         panel_config.bits_per_pixel = LCD_BITS_PER_PIXEL;
-        if (esp_lcd_new_panel_st7789(lcd_io, &panel_config, &lcd_panel) != ESP_OK) {
+        if (esp_lcd_new_panel_st7789(lcd_io, &panel_config, &lcd_panel) != ESP_OK)
+        {
             ESP_LOGD(TAG, "New panel failed");
             throw std::runtime_error("New panel failed");
         };
@@ -61,8 +64,8 @@ namespace ESP32S3_FREENOVE_DEV_KIT
         esp_lcd_panel_init(lcd_panel);
         esp_lcd_panel_mirror(lcd_panel, true, true);
         esp_lcd_panel_disp_on_off(lcd_panel, true);
-
     }
+
     LCD::~LCD()
     {
         if (lcd_panel)
